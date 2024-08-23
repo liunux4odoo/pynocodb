@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "pynocodb"
+version = "0.1.0"
+description = "python sdk for nocodb restful api"
+authors = ["liunux <liunux@qq.com>"]
+readme = "README.md"
+
+[project.urls]
+Homepage = "https://github.com/liunux4odoo/pynocodb"
+Repository = "https://github.com/liunux4odoo/pynocodb"
+Issues = "https://github.com/liunux4odoo/pynocodb/Issues"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+httpx = "^0.27.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
