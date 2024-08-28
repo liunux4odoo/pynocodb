@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-from pynocodb.api_endpoint import ApiEndpoint
+from pynocodb.api_endpoint import ApiEndpoint, all_pages
 from pynocodb.api_resource import ApiResource, AsyncApiResource
 
 
@@ -14,6 +14,7 @@ class RecordEndpoint(ApiEndpoint):
     def __init__(self, api_resouce: ApiResource | AsyncApiResource) -> None:
         super().__init__(api_resouce, endpoint_url="/api/v2/tables")
     
+    @all_pages
     def list_records(
         self,
         table_id: str,
@@ -95,6 +96,7 @@ class RecordEndpoint(ApiEndpoint):
             params = {**(params or {}), "where": where}
         return self._api_resouce._request("get", url, params=params)
 
+    @all_pages
     def list_link_records(
         self,
         table_id: str,
@@ -125,7 +127,7 @@ class RecordEndpoint(ApiEndpoint):
         table_id: str,
         record_id: str | int,
         link_field_id: str,
-        ids: t.List[str | int],
+        ids: t.List[str | int] | str | int,
     ) -> dict:
         '''
         This API endpoint allows you to link records to a specific Link field and Record ID.
@@ -133,6 +135,8 @@ class RecordEndpoint(ApiEndpoint):
         Note that any existing links, if present, will be unaffected during this operation.
         '''
         url = self.format_url(f"{table_id}/links/{link_field_id}/records/{record_id}")
+        if not isinstance(ids, list):
+            ids = [ids]
         data = [{"Id": x} for x in ids]
         return self._api_resouce._request("post", url, json=data)
 
@@ -141,7 +145,7 @@ class RecordEndpoint(ApiEndpoint):
         table_id: str,
         record_id: str | int,
         link_field_id: str,
-        ids: t.List[str | int],
+        ids: t.List[str | int] | str | int,
     ) -> dict:
         '''
         This API endpoint allows you to unlink records from a specific Link field and Record ID.
@@ -151,5 +155,47 @@ class RecordEndpoint(ApiEndpoint):
             non-existent record-ids will be ignored.
         '''
         url = self.format_url(f"{table_id}/links/{link_field_id}/records/{record_id}")
+        if not isinstance(ids, list):
+            ids = [ids]
         data = [{"Id": x} for x in ids]
         return self._api_resouce._request("delete", url, json=data)
+
+    def clear_links(
+        self,
+        table_id: str,
+        record_id: str | int,
+        link_field_id: str,
+    ) -> bool:
+        '''clear all links records of the field'''
+        link_records = self.list_link_records(table_id, record_id, link_field_id, fields=["Id"], limit=-1)
+        ids = [x["Id"] for x in link_records.get("list", [])]
+        return self.unlink_records(table_id, record_id, link_field_id, ids)
+
+    def get_id_maps(
+        self,
+        table_id: str,
+        field: str,
+        view_id: str | None = None,
+        where: str | None = None,
+    ) -> dict:
+        '''
+        get mapper of {[field]: [Id], ...} of a table.
+        return list for duplicated values
+        '''
+        r = self.list_records(
+            table_id=table_id,
+            view_id=view_id,
+            fields=["Id", field],
+            where=where,
+            limit=-1,
+        )
+        res = {}
+        duplicated = {}
+        for x in r.get("list", []):
+            if x[field] in res:
+                duplicated[x[field]] = [res.get(x[field])]
+            else:
+                res[x[field]] = x["Id"]
+            if x[field] in duplicated:
+                duplicated[x[field]].append(x["Id"])
+        return res, duplicated

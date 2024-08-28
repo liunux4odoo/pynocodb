@@ -25,7 +25,7 @@ class ApiEndpoint:
         return self._api_resouce._is_async
 
 
-def all_pages(*args, per_page: int = 100):
+def all_pages(*args, per_page: int = 1000):
     """
     repeat call a request with limit to get all rows
     or simply set limit=-1
